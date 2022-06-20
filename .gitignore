@@ -2,6 +2,7 @@
 node_modules
 public/scanned_invoice/
 Weighing Scale
+config/database.js
 # Adonis directory for storing tmp files
 tmp
 
