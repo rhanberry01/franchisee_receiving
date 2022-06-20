@@ -61,14 +61,33 @@ class TransferReceive extends Model {
         return row
     }
 
-    async checkProductId(productid, transfer_no) {
+    async checkProductId(productid, transfer_no,p_barcode) {
       let row = await Db.connection('transfers')
                         .joinRaw('FROM 0_transfer_header a INNER JOIN 0_transfer_details b ON a.id = b.transfer_id')
                         .where('b.transfer_id', transfer_no)
                         .andWhere('b.stock_id_2', productid)
+                        .andWhere('b.barcode', p_barcode)
       return (row.length > 0) ? row[0] : false
     }
-
+    
+    /* async fetchTransferDetails(transfer_no) {
+        let row = await Db.connection('transfers')
+                          .joinRaw('FROM 0_transfer_header a INNER JOIN 0_transfer_details b ON a.id = b.transfer_id')
+                          .where('b.transfer_id', transfer_no)
+        return (row.length > 0) ? row[0] : false
+      }
+ */
+    
+  /**
+     * @param {int} p_transfer_no 
+     */
+   async fetchTransferDetails(p_transfer_no){
+    let row = await Db.connection('transfers')
+                      .select('*')
+                      .joinRaw('FROM 0_transfer_header a INNER JOIN 0_transfer_details b ON a.id = b.transfer_id')
+                      .andWhere('a.id', p_transfer_no)
+    return row
+}
     async updateProductIdTransfer(transfer_no, productid, barcode, uom) {
       return await Db.connection('transfers').table('0_transfer_details')
               .where('transfer_id', transfer_no)
@@ -291,7 +310,7 @@ class TransferReceive extends Model {
         let row = await Db.connection()
                           .from('0_receive_transfer_details')
                           .where('temp_receiving_id', temp_id)
-                          .orderBy('id', 'ASC')
+                          .orderBy('prod_id', 'ASC')
         return row
     }
     /**
@@ -392,6 +411,7 @@ class TransferReceive extends Model {
    async fetch_temporary_items(temp_id) {
         let row = await Db.from('0_receive_transfer_details')
                           .where('temp_receiving_id', temp_id)
+                          .orderBy('prod_id', 'ASC')
         return row
     }
 
@@ -731,6 +751,7 @@ class TransferReceive extends Model {
                           .from('0_transfer_details')
                           .where('transfer_id', transfer_id)
                           .andWhere('stock_id_2', productid)
+                          .andWhere('barcode', barcode)
                           .andWhere('actual_qty_out', '>', 0)
         return (row.length == 0) ? 0 : parseFloat(row[0].cost) / parseFloat(qty)
     }
@@ -761,6 +782,7 @@ class TransferReceive extends Model {
      */
     async add_adjustment_movement_line(srspos, srs_transfers , movement_id, movement_no, transfer_id, user_id, row) {
         try {
+            
             let unit_cost = parseFloat(row.unit_cost) * parseFloat(row.pack)
             let qty       = parseFloat(row.qty)
 
@@ -812,8 +834,9 @@ class TransferReceive extends Model {
                     new_cost = stock_qty_per_pcs.toFixed(4)
                 }
             // }
+       
 
-            await this.update_product_selling_area(srspos, new_cost, qty_per_pcs, row)
+           // await this.update_product_selling_area(srspos, new_cost, qty_per_pcs, row)
             
             if(parent_category == "10061" && child_category == '') {
                 await this.update_vendor_cost(srspos, new_cost, prod_id)
@@ -845,7 +868,7 @@ class TransferReceive extends Model {
                     //await this.update_pos_srp(final_srp, srspos, row.barcode)
                 }
             }
-            return true
+            return [new_cost, qty_per_pcs]
         } catch (error) {
             console.log(error.toString())
             return false
@@ -1146,18 +1169,37 @@ class TransferReceive extends Model {
             return false
         }
     }
+ 
+
+    async addReturnTransfers(trx,rowData,returneditems) {
+
+        let data   = {
+            CustomerName: rowData.memo_ ,
+            DateServed: rowData.delivery_date ,
+            OldTransactionNo: rowData.m_no_out ,
+            OldTerminalNo: rowData.m_id_out ,
+            Barcode: rowData.barcode ,
+            ProductName: rowData.description ,
+            Qty: returneditems ,
+            Srp: rowData.cost
+
+        }
+       let result =  await trx.insert(data)
+                 .into('franchisee_return') 
+         return result[0]
+    }
     
     async post_receiving(temp_id, user_id, remark, transfer_id, selling_area_negative=null) {
         let srspos = await Db.connection('srspos').beginTransaction()
         let srs_transfers = await Db.connection('transfers').beginTransaction()
         try {
           
-            let checkPlPosted = await srspos.raw(`SELECT TOP 1 * FROM Movements WHERE ReferenceNo = ?`, ['STI-'+transfer_id])
+              let checkPlPosted = await srspos.raw(`SELECT TOP 1 * FROM Movements WHERE ReferenceNo = ?`, ['STI-'+transfer_id])
             if(checkPlPosted.length === 1) {
               await srs_transfers.rollback()
               await srspos.rollback()
-              throw new Error('PL # IS ALREADY POSTED PLEASE PAKI TINGNAN PO ANG IYONG DATABASE !!!')
-            }
+              throw new Error('PL # IS ALREADY POSTED PLEASE PAKI TINGNAN PO ANG IYONG DATABASE !!!') 
+            } 
 
             //AUTO GAINED
             let receiving_movement_id = 0
@@ -1193,6 +1235,7 @@ class TransferReceive extends Model {
             for(const row of temporary_items_list) {
                 let barcode   = row.barcode
                 let pos_prod  = await PosMod.fetch_pos_product({ barcode }, 'qty, productid, productcode, description, uom', srspos)
+               // console.log(pos_prod[0].qty+'qtytytyty');
                 let productid = pos_prod[0].productid
                     product   = await PosMod.fetch_products(srspos, productid)
                 let costofsales = product.costofsales
@@ -1250,15 +1293,42 @@ class TransferReceive extends Model {
             // await this.add_gl_trans(srs_transfers, aria_db, m_type, transfer_id, debit_account, net_of_vat_total)
             // await this.add_gl_trans(srs_transfers, aria_db, m_type, transfer_id, credit_account, -net_of_vat_total)
 
+            let fline = [];
             for (const row of temp_item_re) {
+
                 let result = await this.add_adjustment_movement_line(srspos, srs_transfers, movement_id, movement_no, transfer_id, user_id, row)
+                
                 if (!result) {
                     await srs_transfers.rollback()
                     await srspos.rollback()
                     throw new Error('Error adjustment line')
                 }
+
+                let new_cost = result[0]
+                let qty_per_pcs = result[1]
+
+                if(fline[row.productid]){
+                        fline[row.productid]['qty_per_pcs'] = fline[row.productid]['qty_per_pcs'] + qty_per_pcs
+                }else{
+                        fline[row.productid] = 
+                        {
+                            productid : row.productid,
+                            new_cost:  new_cost,
+                            qty_per_pcs : qty_per_pcs,
+                            row : row   
+                        }
+                }            
+                
             }
 
+            for(const key in fline) {
+
+              let ftotal_qty_per_pcs =  fline[key]['qty_per_pcs']
+              let  frow =  fline[key]['row']
+              let fcost = fline[key]['new_cost']
+               await this.update_product_selling_area(srspos,fcost, ftotal_qty_per_pcs, frow)
+            }
+            
             await this.update_header_transfer(srs_transfers, user_id, movement_id, movement_no, transfer_id, remark)
 
             //AUTO LOSS
@@ -1271,11 +1341,27 @@ class TransferReceive extends Model {
                 }
             }
 
-            //AUTO LOSS
+             //AUTO LOSS
             await srs_transfers.commit()
             await srspos.commit()
             await this.update_transfer_posted(transfer_id)
 
+            let transfer_res = await this.fetchTransferDetails(transfer_id) // pang get ng details
+
+            let mainnova = await Db.connection('mainnova').beginTransaction()
+            for(const row of transfer_res) {
+                let actual_qty_out = parseFloat(row.actual_qty_out)
+                let qty_in = parseFloat(row.qty_in)
+                let returned_items = actual_qty_out - qty_in
+
+                if(returned_items > 0 ){
+                    await this.addReturnTransfers(mainnova,row,returned_items) // ito yung pang insert na part
+                       
+                }
+            } 
+            await srs_transfers.commit() 
+          
+         
             // if(parent_category == "10061" && child_category == '') {
             //     await OpenPoVariableMod.update_scale(user_id)
             // }

@@ -77,7 +77,7 @@ module.exports = {
       port: Env.get('DB_PORT', ''),
       user: Env.get('DB_USER', 'root'),
       password: Env.get('DB_PASSWORD', ''),
-      database: Env.get('DB_DATABASE_RECEIVING', 'receiving_new_llano')
+      database: Env.get('DB_DATABASE_RECEIVING', 'receiving_new_deparo')
     },
     debug: Env.get('DB_DEBUG', false)
   },
@@ -110,7 +110,7 @@ module.exports = {
       port: Env.get('DB_PORT_TRANSFERS', ''),
       user: Env.get('DB_USER_TRANSFERS', 'root'),
       password: Env.get('DB_PASSWORD_TRANSFERS', ''),
-      database: Env.get('DB_DATABASE_TRANSFERS', 'transfers_llano')
+      database: Env.get('DB_DATABASE_TRANSFERS', 'transfers_deparo')
     },
     debug: Env.get('DB_DEBUG', false)
   },
@@ -143,7 +143,7 @@ module.exports = {
       port: Env.get('DB_PORT_MS', ''),
       user: Env.get('DB_USER_MS', 'markuser'),
       password: Env.get('DB_PASSWORD_MS', 'tseug'),
-      database: Env.get('DB_DATABASE_SRSPOS', 'COMLLANO')
+      database: Env.get('DB_DATABASE_SRSPOS', 'COMDEPARO_FC')
     },
     debug: Env.get('DB_DEBUG', false),
     requestTimeout: 300000,
@@ -178,6 +178,17 @@ module.exports = {
       database: Env.get('DB_DATABASE_SRSPOS_CENTER', 'SRSMNOVA')
     },
     debug: Env.get('DB_DEBUG', false)
+  },
+  mainnova: {
+    client: 'mysql',
+    connection: {
+      host: '192.168.0.179',
+      port: '',
+      user: 'root',
+      password: 'srsnova',
+      database: 'srspos'
+    },
+    debug: Env.get('DB_DEBUG', true)
   },
   //gulay
   srsnmy: {
