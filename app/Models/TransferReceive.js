@@ -1172,7 +1172,7 @@ class TransferReceive extends Model {
  
 
     async addReturnTransfers(trx,rowData,returneditems) {
-
+    try{
         let data   = {
             CustomerName: rowData.memo_ ,
             DateServed: rowData.delivery_date ,
@@ -1187,6 +1187,11 @@ class TransferReceive extends Model {
        let result =  await trx.insert(data)
                  .into('franchisee_return') 
          return result[0]
+    } catch (error) {
+        console.log(error.toString())
+        return false
+    }
+        
     }
     
     async post_receiving(temp_id, user_id, remark, transfer_id, selling_area_negative=null) {
@@ -1355,11 +1360,17 @@ class TransferReceive extends Model {
                 let returned_items = actual_qty_out - qty_in
 
                 if(returned_items > 0 ){
-                    await this.addReturnTransfers(mainnova,row,returned_items) // ito yung pang insert na part
+
+                   let returns =  await this.addReturnTransfers(mainnova,row,returned_items) // ito yung pang insert na part
+                    if(returns == false) {
+                        await srspos.rollback()
+                        await srs_transfers.rollback()
+                        throw new Error('Error post return Contact I.T Programmer')
+                    }
                        
                 }
             } 
-            await srs_transfers.commit() 
+            await mainnova.commit() 
           
          
             // if(parent_category == "10061" && child_category == '') {
