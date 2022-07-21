@@ -421,14 +421,14 @@ class TransferReceive extends Model {
      * @param {object} details // mvement header data 
      * @param {object} srspos rollback 
      */
-    async add_receiving_movement(movement_no, details, srspos, transfer_id) {
+    async add_receiving_movement(movement_no, details, srspos, transfer_id,sourceinvoiceno) {
         try {
           let today = moment().format(TO_DATE) + ' 00:00:00'
           let data = {
               movementno : movement_no.toString(),
               movementcode: details.movement_code.toString(),
               referenceno: 'STI-'+transfer_id,
-              sourceinvoiceno:  '',
+              sourceinvoiceno:  sourceinvoiceno,
               sourcedrno:  '',
               todescription: details.to_description,
               toaddress: '',
@@ -987,7 +987,7 @@ class TransferReceive extends Model {
             let movement_code = 'AIG'
             let aig_counter   =  await PosMod.fetch_counter(srspos, movement_code)
             let ig_counter    = leftPad(aig_counter, 10, 0)
-
+            let sourceinvoiceno = ''
             let company          = await PosMod.get_company()
             let movement_details = {
                 movement_code: movement_code,
@@ -999,7 +999,7 @@ class TransferReceive extends Model {
                 user_id: user_id,
                 company: company
             }
-            let receiving_movement_id = await this.add_receiving_movement(ig_counter, movement_details, srspos, transfer_id)
+            let receiving_movement_id = await this.add_receiving_movement(ig_counter, movement_details, srspos, transfer_id,sourceinvoiceno)
 
             let qty      = 0
             let extended = 0
@@ -1128,7 +1128,7 @@ class TransferReceive extends Model {
             let movement_code = 'AIL'
             let ail_counter   = await PosMod.fetch_counter(srspos, movement_code)
             let il_counter    = leftPad(ail_counter, 10, 0)
-
+            let sourceinvoiceno = ''
             let company          = await PosMod.get_company()
             let movement_details = {
                 movement_code: movement_code,
@@ -1140,7 +1140,7 @@ class TransferReceive extends Model {
                 user_id: user_id,
                 company: company
             }
-            let lost_movement_id = await this.add_receiving_movement(il_counter, movement_details, srspos, transfer_id)
+            let lost_movement_id = await this.add_receiving_movement(il_counter, movement_details, srspos, transfer_id,sourceinvoiceno)
             
             let qty      = 0
             let extended = 0
@@ -1235,6 +1235,7 @@ class TransferReceive extends Model {
             let movement_status   = "POSTED"
             let parent_category   = ""
             let child_category    = ""
+            let sourceinvoiceno   = transfer.m_no_out
 
             let temporary_items_list = await this.fetch_temporary_items(temp_id)
             for(const row of temporary_items_list) {
@@ -1281,7 +1282,7 @@ class TransferReceive extends Model {
                 user_id
             }
 
-            let movement_id      = await this.add_receiving_movement(movement_no, movement_details, srspos, transfer_id)
+            let movement_id      = await this.add_receiving_movement(movement_no, movement_details, srspos, transfer_id,sourceinvoiceno)
             // let m_type           = 71
             // let debit_account    = 570001
             // let credit_account   = 2350017
