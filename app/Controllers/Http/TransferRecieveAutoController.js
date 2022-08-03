@@ -89,12 +89,12 @@ class TransferReceiveController {
         let product      = await PosMod.fetch_products(null, productid)
         let current_inv  = product.sellingarea - product.damaged
 
-        let checkProductId = await TransferReceiveMod.checkProductId(productid, p_transfer_no)
+        let checkProductId = await TransferReceiveMod.checkProductId(productid, p_transfer_no,p_barcode)
         if(!checkProductId) {
             await TransferReceiveMod.updateProductIdTransfer(p_transfer_no, productid, p_barcode, pos_products[0].uom,)
         }
 
-        let checkProductIds = await TransferReceiveMod.checkProductId(productid, p_transfer_no)
+        let checkProductIds = await TransferReceiveMod.checkProductId(productid, p_transfer_no,p_barcode)
         if(!checkProductIds) {
             throw new CustomException({ message: `Opps Item not in transfer` }, 401)
         }
