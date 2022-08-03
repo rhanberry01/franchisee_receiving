@@ -46,6 +46,9 @@ Route.group(() => {
   Route.get('/purchaser/receive_po/fetch_pending_po_request', 'ReceivePoController.fetch_pending_po_request')
   .middleware(['checkUser'])
 
+// set api auto
+Route.post('/purchaser/receive_po/transfer/receive_auto/post_receiving', 'TransferReceiveAutoController.post_receiving')
+// set api auto
   
   //price survey
   Route.get('/purchaser/receive_po_survey/fetch_po', 'ReceivePoSurveyController.fetch_po').middleware(['checkUser'])
