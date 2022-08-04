@@ -1,5 +1,5 @@
 'use strict'
-const TransferReceiveMod    = use('App/Models/TransferReceive')
+const TransferReceiveMod    = use('App/Models/TransferReceiveAuto')
 const PosMod      = use('App/Models/Pos')
 const CustomException = use('App/Exceptions/CustomException')
 const Env = use('Env')
@@ -197,18 +197,22 @@ class TransferReceiveController {
         await TransferReceiveMod.delete_items(p_id)
         response.status(200).send({ count_items })
     }
-
+   
+    
     async post_receiving({ request, response }) {
 
         // let user_id  = await Redis.get(request.user_id)
 
+
         let { p_remarks, p_transfer_no, user_id } = request.only(['p_remarks', 'p_transfer_no', 'user_id'])
 
+        
         if (p_remarks == null) {
             p_remarks = ''
         }
 
         let transfer = await TransferReceiveMod.fetch_receive_header(p_transfer_no)
+       
         if(transfer === 0) {
             console.log('THIS IS ALREADY POSTED')
             throw new CustomException({ message: 'THIS IS ALREADY POSTED' }, 401)

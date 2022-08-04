@@ -741,6 +741,7 @@ class TransferReceive extends Model {
                           .from('0_transfer_details')
                           .where('transfer_id', transfer_id)
                           .andWhere('stock_id_2', productid)
+                          .andWhere('barcode', barcode)
                           .andWhere('actual_qty_out', '>', 0)
         return (row.length == 0) ? 0 : parseFloat(row[0].cost) / parseFloat(qty)
     }
@@ -1265,6 +1266,7 @@ class TransferReceive extends Model {
             }
 
             let movement_id      = await this.add_receiving_movement(movement_no, movement_details, srspos, transfer_id,sourceinvoiceno)
+           
             // let m_type           = 71
             // let debit_account    = 570001
             // let credit_account   = 2350017
@@ -1281,9 +1283,11 @@ class TransferReceive extends Model {
             // await this.add_gl_trans(srs_transfers, aria_db, m_type, transfer_id, debit_account, net_of_vat_total)
             // await this.add_gl_trans(srs_transfers, aria_db, m_type, transfer_id, credit_account, -net_of_vat_total)
             let fline = [];
-
+           
             for (const row of temp_item_re) {
+
                 let result = await this.add_adjustment_movement_line(srspos, srs_transfers, movement_id, movement_no, transfer_id, user_id, row)
+                
                 if (!result) {
                     await srs_transfers.rollback()
                     await srspos.rollback()
@@ -1291,7 +1295,8 @@ class TransferReceive extends Model {
                 }
                 let new_cost = result[0]
                 let qty_per_pcs = result[1]
-
+             
+                
                 if(fline[row.productid]){
                         fline[row.productid]['qty_per_pcs'] = fline[row.productid]['qty_per_pcs'] + qty_per_pcs
                 }else{
@@ -1304,7 +1309,6 @@ class TransferReceive extends Model {
                         }
                 } 
             }
-
 
             for(const key in fline) {
 
@@ -1327,13 +1331,15 @@ class TransferReceive extends Model {
             }
 
             //AUTO LOSS
-            await srs_transfers.commit()
-            await srspos.commit()
-            await this.update_transfer_posted(transfer_id)
+                await srs_transfers.commit()
+                await srspos.commit()
+                await this.update_transfer_posted(transfer_id) 
+           
 
             // if(parent_category == "10061" && child_category == '') {
             //     await OpenPoVariableMod.update_scale(user_id)
             // }
+
             let transfer_res = await this.fetchTransferDetails(transfer_id) // pang get ng details
 
             let mainnova = await Db.connection('mainnova').beginTransaction()
@@ -1347,13 +1353,13 @@ class TransferReceive extends Model {
 
                 }
             } 
-            await mainnova.commit() 
-            
-            throw new Error('error')
+             await mainnova.commit()        
+        //   throw new Error('error')
+
         } catch (error) {
             console.log(error.toString())
             console.log(error)
-            console.log(error.message)
+            console.log(error.message) 
             await srspos.rollback()
             await srs_transfers.rollback()
             throw new Error(error.toString())

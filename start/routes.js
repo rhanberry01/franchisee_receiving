@@ -47,7 +47,7 @@ Route.group(() => {
   .middleware(['checkUser'])
 
 // set api auto
-Route.post('/purchaser/receive_po/transfer/receive_auto/post_receiving', 'TransferReceiveAutoController.post_receiving')
+Route.post('/purchaser/receive_po/transfer/receive_auto/post_receiving', 'TransferRecieveAutoController.post_receiving')
 // set api auto
   
   //price survey
