@@ -747,13 +747,14 @@ class TransferReceive extends Model {
      */
     async fetch_transfer_out_cost(transfer_id, productid, barcode, qty) {
         let row = await Db.connection('transfers')
-                          .select('cost')
+                          .select(Db.raw('sum(cost * actual_qty_out) as cost ,sum(actual_qty_out) as aco') )
                           .from('0_transfer_details')
                           .where('transfer_id', transfer_id)
                           .andWhere('stock_id_2', productid)
                           .andWhere('barcode', barcode)
                           .andWhere('actual_qty_out', '>', 0)
-        return (row.length == 0) ? 0 : parseFloat(row[0].cost) / parseFloat(qty)
+                          .groupBy('stock_id_2')
+        return (row.length == 0) ? 0 : (parseFloat(row[0].cost) / parseFloat(row[0].aco)) / parseFloat(qty)
     }
 
     /**

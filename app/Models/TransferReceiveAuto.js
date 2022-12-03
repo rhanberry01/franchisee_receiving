@@ -743,6 +743,7 @@ class TransferReceive extends Model {
                           .andWhere('stock_id_2', productid)
                           .andWhere('barcode', barcode)
                           .andWhere('actual_qty_out', '>', 0)
+                          .groupBy('b.prod_id')
         return (row.length == 0) ? 0 : parseFloat(row[0].cost) / parseFloat(qty)
     }
 
