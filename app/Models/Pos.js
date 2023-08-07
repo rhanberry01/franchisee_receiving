@@ -239,7 +239,7 @@ class PosProduct extends Model {
      */
     async fetch_vendor_product(product_id, vendor_code) {
         let row = await Db.connection('srspos')
-            .select('productid', 'vendorproductcode', 'description', 'uom', 'totalcost', 'cost')
+            .select('productid', 'vendorproductcode', 'description', 'uom', 'totalcost', 'cost','qty')
             .from('vendor_products')
             .where('vendorcode', vendor_code)
             .andWhere('productid', product_id)
